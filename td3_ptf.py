@@ -1,5 +1,7 @@
 '''
-Train a TD3 model using stable-baselines3 library and the environment in TradingEnvContinuousAction.py
+Train a TD3 model using stable-baselines3 library and the environment in TradingEnvContActionPtf.py.
+In this environment, the action directly represents the new portfolio, instead of the stocks to buy/sell from
+the previous portfolio.
 '''
 
 import gymnasium as gym

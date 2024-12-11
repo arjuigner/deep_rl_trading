@@ -1,3 +1,12 @@
+'''
+In this environment, the action space represents the new portfolio, instead of the stocks to buy/sell from the previous portfolio.
+Example: action = [0.3, 0.1] means that we want 0.3*K_{max} shares of stock #1 and 0.1*K_{max} shares of stock #2.
+
+If we don't have enough value to buy the desired portfolio, the action will be scaled down to fit within the cash constraints.
+
+Commission fees are not implemented yet.
+'''
+
 import numpy as np
 import pandas as pd
 from gymnasium import Env
