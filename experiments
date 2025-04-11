@@ -1,0 +1,7 @@
+1: [deleted by mistake, worked decently well] 
+Local AAPL data, Close only, no features, T=100=T_eval for now
+Agent seems to be able to learn something at least, even on test dataset.
+
+1: [worked meh, but better than something it seems]
+now patience=20 (because increasing patience doesnt hurt perf, only "wastes" more time once the eval score decreases
+T=1000, T_eval=250
