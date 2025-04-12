@@ -2,6 +2,25 @@
 Local AAPL data, Close only, no features, T=100=T_eval for now
 Agent seems to be able to learn something at least, even on test dataset.
 
-1: [worked meh, but better than something it seems]
+1: [worked meh, but better than nothing it seems]
 now patience=20 (because increasing patience doesnt hurt perf, only "wastes" more time once the eval score decreases
 T=1000, T_eval=250
+
+2: added 5 last returns as features
+
+3: added 10 last returns as features
+
+4: added 20 last returns as features
+
+5: added all indicators as features ('AAPL Close', 'AAPL ret_t-0', 'AAPL ret_t-1', 'AAPL ret_t-2',
+       'AAPL ret_t-3', 'AAPL ret_t-4', 'AAPL ret_t-5', 'AAPL ret_t-6',
+       'AAPL ret_t-7', 'AAPL ret_t-8', 'AAPL ret_t-9', 'AAPL ret_t-10',
+       'AAPL ret_t-11', 'AAPL ret_t-12', 'AAPL ret_t-13', 'AAPL ret_t-14',
+       'AAPL ret_t-15', 'AAPL ret_t-16', 'AAPL ret_t-17', 'AAPL ret_t-18',
+       'AAPL ret_t-19', 'AAPL sma_5', 'AAPL sma_10', 'AAPL sma_20',
+       'AAPL rsi_14', 'AAPL macd', 'AAPL macd_signal', 'AAPL macd_hist',
+       'AAPL vol_10')
+
+6: TODO same as 4 but with eval_freq bigger (so give it more time to learn)
+
+7: TODO  same as 5 but eval_freq bigger

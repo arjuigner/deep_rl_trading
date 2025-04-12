@@ -137,7 +137,10 @@ def remove_nans(data: pd.DataFrame) -> pd.DataFrame:
     print("Number of NaNs in each column:\n", data.isna().sum(axis=0))
     max_nans_per_col = data.isna().sum(axis=0).max()
     print("max_nans_per_col = %d" % max_nans_per_col)
+    
     data = data.loc[max_nans_per_col:]
+    data.reset_index(drop=True, inplace=True)
+    
     nans_remaining = data.isna().sum().sum()
     print(f"Remaining NaNs after removing the {max_nans_per_col} first rows: {nans_remaining}")
     print(f"Shape: {data.shape}")
@@ -145,29 +148,34 @@ def remove_nans(data: pd.DataFrame) -> pd.DataFrame:
 
 def normalize(data: pd.DataFrame) -> pd.DataFrame:
     # Returns
-    ret_cols = [col for col in data.columns if "ret" in col]
+    ret_cols = [col for col in data.columns if "ret_t" in col]
+    print("Normalize returns:", ret_cols)
     for col in ret_cols:
         data.loc[:,col] *= 10
+    
         
     # SMAs
-    sma_cols = [col for col in data.columns if "sma" in col]
+    sma_cols = [col for col in data.columns if "sma_" in col]
+    print("Normalize sma:", sma_cols)
     for col in sma_cols:
         data.loc[:,col] *= 10
         
     # MACD
-    macd_cols = [col for col in data.columns if "macd" in col]
+    macd_cols = [col for col in data.columns if "macd_" in col]
+    print("Normalize macd:", macd_cols)
     for col in macd_cols:
         data.loc[:,col] *= 20
     
     # VOL
-    vol_cols = [col for col in data.columns if "vol" in col]
+    vol_cols = [col for col in data.columns if "vol_" in col]
+    print("Normalize vol:", vol_cols)
     for col in vol_cols:
         data.loc[:,col] *= 40
         
-    # Print stats about the columns, 8 by 8 (to avoid some columns being replaced by ...)
-    # Also only print stats for one of the ret_t-X columns because it should be almost the same for all of them
-    all_but_ret = [col for col in data.columns if not "ret" in col or "ret_t-0" in col]
-    print("Stats about each column after normalization:")
-    for i in range(0, len(all_but_ret), 8):
-        print(data[all_but_ret[i:i+8]].describe())
+    # Close
+    close_cols = [col for col in data.columns if "Close" in col]
+    print("Normalize close:", close_cols)
+    for col in close_cols:
+        data.loc[:,col] /= data.loc[0, col] 
+        
     return data

@@ -4,62 +4,13 @@ import os
 import pandas as pd 
 import torch.optim
 import yfinance as yf
+from data import get_data_with_features, remove_nans, normalize
 from environment import TradingEnv
-#from stable_baselines3 import TD3
-#from stable_baselines3.common.noise import NormalActionNoise
 from td3_impl import TD3Agent, create_live_plot_logger
 from evaluation import (
     evaluate_agent, evaluate_random_agent, evaluate_buy_and_hold_agent
 )
 from typing import Dict
-
-def download_data(tickers, start_date, end_date):
-    '''
-    Download data from Yahoo Finance, and return a pandas DataFrame with a MultiIndex
-    '''
-    data = yf.download(tickers, start=start_date, end=end_date)
-    if len(tickers) == 1:
-        # Add a subcolumn to each column called stock_name
-        # so 'Open' becomes ('Open', '<stock name>'), etc.
-        # This way the returned dataframe is similar to when there are multiple tickers.
-        data.columns = pd.MultiIndex.from_product([data.columns, tickers], names=['Price', 'Ticker'])       
-    return data
-
-def load_and_clean_stock_data(filepath: str) -> pd.DataFrame:
-    df = pd.read_csv(filepath)
-    print(f"Data size: {df.shape}; #NaNs = {df.isna().sum().sum()}")
-    
-    # Rename columns to remove slashes and spaces
-    df.rename(columns={
-        ' Close/Last': 'Close',
-        ' Open': 'Open',
-        ' High': 'High',
-        ' Low': 'Low',
-        ' Volume': 'Volume',
-        'Date': 'Date'
-    }, inplace=True)
-    
-    # Remove '$' and convert price columns to float
-    price_cols = ['Close', 'Open', 'High', 'Low']
-    for col in price_cols:
-        df[col] = df[col].replace('[\$,]', '', regex=True).astype(float)
-    
-    # Convert Volume to numeric
-    df['Volume'] = pd.to_numeric(df['Volume'], errors='coerce')
-    
-    # Convert Date to datetime and sort (optional but good practice)
-    df['Date'] = pd.to_datetime(df['Date'])
-    df.sort_values('Date', inplace=True)
-    df.reset_index(drop=True, inplace=True)
-
-    # Optionally set the date as index
-    df.set_index('Date', inplace=True)
-    
-    # Add dummy technical indicators if needed (for compatibility with the environment)
-    df['feature1'] = df['Close'].pct_change().fillna(0)
-    df['feature2'] = df['Volume'] / df['Volume'].max()
-
-    return df[["Close", "feature1", "feature2"]]
 
 
 def run_experiment(experiment_id: int,
@@ -154,14 +105,342 @@ def run_experiment(experiment_id: int,
         
         
 if __name__ == "__main__":
-    #data = download_data(["AAPL", "MSFT"], "2018-01-01", "2022-01-01")
-    data = load_and_clean_stock_data('data/HistoricalQuotes.csv')
-    data["Close"] /= data["Close"].iloc[0]  # Normalize to start at 1.0
-    data = data[["Close",]]
+    # data, all_features = get_data_with_features("./data/HistoricalQuotes.csv")
+    # data = remove_nans(data)
+    # data = normalize(data)
     
+    # EXPERIMENT_ID = 2
+    # feature_names = [
+    #     "AAPL ret_t-0",
+    #     "AAPL ret_t-1",
+    #     "AAPL ret_t-2",
+    #     "AAPL ret_t-3",
+    #     "AAPL ret_t-4",
+    # ]
+    # T=1000
+    # T_eval=250
+    # n_runs = 5
+    
+    # assert T + T_eval < len(data), "Not enough data for training and evaluation"
+    # assert all([fn in all_features for fn in feature_names]), "Some of your features are not found in the DataFrame"
+    # data = data[["AAPL Close"] + feature_names]
+    
+    # # Split the data into training and evaluation sets
+    # eval_data = data.iloc[T:T + T_eval]
+    # data = data.iloc[:T]
+    # print(data.head())
+    # print("NaNs:", data.isna().sum().sum())
+    # print("Eval NaNs:", eval_data.isna().sum().sum())
+    
+    # env_params = {
+    #     "N": 20,
+    #     "K_max": 100.0,
+    #     "transaction_fee_rate": 0.001,
+    #     "initial_cash": 100.0,
+    #     "overspending_penalty_coeff": 0.001,
+    #     "feature_names": feature_names
+    # }
+    
+    # td3_params = {
+    #     "state_dim": 3 + len(feature_names),
+    #     "action_dim": 1,
+    #     "polyak": 0.995
+    # }
+    
+    # training_params = {
+    #     "steps": 10000,
+    #     "batch_size": 128,
+    #     "gamma": 0.99,
+    #     "expl_noise_std": 0.1,
+    #     "policy_noise_std": 0.2,
+    #     "policy_noise_clip": 0.5,
+    #     "policy_delay": 2,
+    #     "random_steps": 1000,
+    #     "memory_size": 100_000,
+    #     "patience":20,
+    #     "eval_freq":5
+    # }
+    
+    # run_experiment(EXPERIMENT_ID, data, eval_data, td3_params, env_params, training_params, n_runs=n_runs, T=T, T_eval=T_eval)
+    
+    
+    
+    # """env = TradingEnv(data, N=20, K_max=100.0, 
+    #                  transaction_fee_rate=0 * 0.001,
+    #                  initial_cash=100.0,
+    #                  overspending_penalty_coeff=0 * 0.001,
+    #                  feature_names=["feature1", "feature2"],)
+    
+    # # action_noise = NormalActionNoise(mean=np.zeros(env.n_stocks), sigma=0.1 * np.ones(env.n_stocks))
+    # # model = TD3(
+    # #     "MlpPolicy",
+    # #     env,
+    # #     action_noise=action_noise,
+    # #     verbose=1,
+    # #     learning_rate=1e-3,
+    # #     buffer_size=100_000,
+    # #     learning_starts=1000,
+    # #     batch_size=128,
+    # #     tau=0.005,
+    # #     gamma=0.99,
+    # #     train_freq=(1, "episode"),
+    # #     gradient_steps=-1,
+    # #     policy_kwargs=dict(net_arch=[256, 256])
+    # # )
+    # # model.learn(total_timesteps=10000)
+    # DO_TRAIN = False
+    # if DO_TRAIN:
+    #     model = TD3Agent(state_dim=env.observation_space.shape[0], 
+    #                 action_dim=env.action_space.shape[0],
+    #                 min_action=env.action_space.low,
+    #                 max_action=env.action_space.high,
+    #                 optim_constructor=lambda params: torch.optim.Adam(params, lr=0.001),
+    #                 polyak=0.995
+    #                 )
+    #     model.train(env, steps=3000, batch_size=128, gamma=0.99, expl_noise_std=0.1,
+    #                 policy_noise_std=0.2, policy_noise_clip=0.5, policy_delay=2,
+    #                 random_steps=1000, memory_size=100_000, log_fn=create_live_plot_logger())
+    #     model.save("models/toy")
+    # else:
+    #     model = TD3Agent.load("models/toy", lambda params: torch.optim.Adam(params, lr=0.001))
+    # evaluate_agent(env, model, 50)
+    # evaluate_random_agent(env, 50)
+    # evaluate_buy_and_hold_agent(env, 50)"""
+    
+    # data, all_features = get_data_with_features("./data/HistoricalQuotes.csv")
+    # data = remove_nans(data)
+    # data = normalize(data)
+    
+    # EXPERIMENT_ID = 3
+    # feature_names = [
+    #     "AAPL ret_t-0",
+    #     "AAPL ret_t-1",
+    #     "AAPL ret_t-2",
+    #     "AAPL ret_t-3",
+    #     "AAPL ret_t-4",
+    #     "AAPL ret_t-5",
+    #     "AAPL ret_t-6",
+    #     "AAPL ret_t-7",
+    #     "AAPL ret_t-8",
+    #     "AAPL ret_t-9",
+    # ]
+    # T=1000
+    # T_eval=250
+    # n_runs = 5
+    
+    # assert T + T_eval < len(data), "Not enough data for training and evaluation"
+    # assert all([fn in all_features for fn in feature_names]), "Some of your features are not found in the DataFrame"
+    # data = data[["AAPL Close"] + feature_names]
+    
+    # # Split the data into training and evaluation sets
+    # eval_data = data.iloc[T:T + T_eval]
+    # data = data.iloc[:T]
+    # print(data.head())
+    # print("NaNs:", data.isna().sum().sum())
+    # print("Eval NaNs:", eval_data.isna().sum().sum())
+    
+    # env_params = {
+    #     "N": 20,
+    #     "K_max": 100.0,
+    #     "transaction_fee_rate": 0.001,
+    #     "initial_cash": 100.0,
+    #     "overspending_penalty_coeff": 0.001,
+    #     "feature_names": feature_names
+    # }
+    
+    # td3_params = {
+    #     "state_dim": 3 + len(feature_names),
+    #     "action_dim": 1,
+    #     "polyak": 0.995
+    # }
+    
+    # training_params = {
+    #     "steps": 10000,
+    #     "batch_size": 128,
+    #     "gamma": 0.99,
+    #     "expl_noise_std": 0.1,
+    #     "policy_noise_std": 0.2,
+    #     "policy_noise_clip": 0.5,
+    #     "policy_delay": 2,
+    #     "random_steps": 1000,
+    #     "memory_size": 100_000,
+    #     "patience":20,
+    #     "eval_freq":5
+    # }
+    
+    # run_experiment(EXPERIMENT_ID, data, eval_data, td3_params, env_params, training_params, n_runs=n_runs, T=T, T_eval=T_eval)
+    
+    ###################################################################
+    ###################################################################
+    ###################################################################
+    
+    # data, all_features = get_data_with_features("./data/HistoricalQuotes.csv")
+    # data = remove_nans(data)
+    # data = normalize(data)
+    
+    # EXPERIMENT_ID = 4
+    # feature_names = [
+    #     "AAPL ret_t-0",
+    #     "AAPL ret_t-1",
+    #     "AAPL ret_t-2",
+    #     "AAPL ret_t-3",
+    #     "AAPL ret_t-4",
+    #     "AAPL ret_t-5",
+    #     "AAPL ret_t-6",
+    #     "AAPL ret_t-7",
+    #     "AAPL ret_t-8",
+    #     "AAPL ret_t-9",
+    #     "AAPL ret_t-10",
+    #     "AAPL ret_t-11",
+    #     "AAPL ret_t-12",
+    #     "AAPL ret_t-13",
+    #     "AAPL ret_t-14",
+    #     "AAPL ret_t-15",
+    #     "AAPL ret_t-16",
+    #     "AAPL ret_t-17",
+    #     "AAPL ret_t-18",
+    #     "AAPL ret_t-19",
+    # ]
+    # T=1000
+    # T_eval=250
+    # n_runs = 5
+    
+    # assert T + T_eval < len(data), "Not enough data for training and evaluation"
+    # assert all([fn in all_features for fn in feature_names]), "Some of your features are not found in the DataFrame"
+    # data = data[["AAPL Close"] + feature_names]
+    
+    # # Split the data into training and evaluation sets
+    # eval_data = data.iloc[T:T + T_eval]
+    # data = data.iloc[:T]
+    # print(data.head())
+    # print("NaNs:", data.isna().sum().sum())
+    # print("Eval NaNs:", eval_data.isna().sum().sum())
+    
+    # env_params = {
+    #     "N": 20,
+    #     "K_max": 100.0,
+    #     "transaction_fee_rate": 0.001,
+    #     "initial_cash": 100.0,
+    #     "overspending_penalty_coeff": 0.001,
+    #     "feature_names": feature_names
+    # }
+    
+    # td3_params = {
+    #     "state_dim": 3 + len(feature_names),
+    #     "action_dim": 1,
+    #     "polyak": 0.995
+    # }
+    
+    # training_params = {
+    #     "steps": 10000,
+    #     "batch_size": 128,
+    #     "gamma": 0.99,
+    #     "expl_noise_std": 0.1,
+    #     "policy_noise_std": 0.2,
+    #     "policy_noise_clip": 0.5,
+    #     "policy_delay": 2,
+    #     "random_steps": 1000,
+    #     "memory_size": 100_000,
+    #     "patience":20,
+    #     "eval_freq":5
+    # }
+    
+    # run_experiment(EXPERIMENT_ID, data, eval_data, td3_params, env_params, training_params, n_runs=n_runs, T=T, T_eval=T_eval)
+    
+    # ###################################################################
+    # ###################################################################
+    # ###################################################################
+    
+    # data, all_features = get_data_with_features("./data/HistoricalQuotes.csv")
+    # data = remove_nans(data)
+    # data = normalize(data)
+    
+    # EXPERIMENT_ID = 5
+    # feature_names = all_features
+    # T=1000
+    # T_eval=250
+    # n_runs = 5
+    
+    # assert T + T_eval < len(data), "Not enough data for training and evaluation"
+    # assert all([fn in all_features for fn in feature_names]), "Some of your features are not found in the DataFrame"
+    # data = data[["AAPL Close"] + feature_names]
+    
+    # # Split the data into training and evaluation sets
+    # eval_data = data.iloc[T:T + T_eval]
+    # data = data.iloc[:T]
+    # print(data.head())
+    # print("NaNs:", data.isna().sum().sum())
+    # print("Eval NaNs:", eval_data.isna().sum().sum())
+    
+    # env_params = {
+    #     "N": 20,
+    #     "K_max": 100.0,
+    #     "transaction_fee_rate": 0.001,
+    #     "initial_cash": 100.0,
+    #     "overspending_penalty_coeff": 0.001,
+    #     "feature_names": feature_names
+    # }
+    
+    # td3_params = {
+    #     "state_dim": 3 + len(feature_names),
+    #     "action_dim": 1,
+    #     "polyak": 0.995
+    # }
+    
+    # training_params = {
+    #     "steps": 10000,
+    #     "batch_size": 128,
+    #     "gamma": 0.99,
+    #     "expl_noise_std": 0.1,
+    #     "policy_noise_std": 0.2,
+    #     "policy_noise_clip": 0.5,
+    #     "policy_delay": 2,
+    #     "random_steps": 1000,
+    #     "memory_size": 100_000,
+    #     "patience":20,
+    #     "eval_freq":5
+    # }
+    
+    # run_experiment(EXPERIMENT_ID, data, eval_data, td3_params, env_params, training_params, n_runs=n_runs, T=T, T_eval=T_eval)
+    
+    ###################################################################
+    ###################################################################
+    ###################################################################
+    
+    data, all_features = get_data_with_features("./data/HistoricalQuotes.csv")
+    data = remove_nans(data)
+    data = normalize(data)
+    
+    EXPERIMENT_ID = 6
+    feature_names = [
+        "AAPL ret_t-0",
+        "AAPL ret_t-1",
+        "AAPL ret_t-2",
+        "AAPL ret_t-3",
+        "AAPL ret_t-4",
+        "AAPL ret_t-5",
+        "AAPL ret_t-6",
+        "AAPL ret_t-7",
+        "AAPL ret_t-8",
+        "AAPL ret_t-9",
+        "AAPL ret_t-10",
+        "AAPL ret_t-11",
+        "AAPL ret_t-12",
+        "AAPL ret_t-13",
+        "AAPL ret_t-14",
+        "AAPL ret_t-15",
+        "AAPL ret_t-16",
+        "AAPL ret_t-17",
+        "AAPL ret_t-18",
+        "AAPL ret_t-19",
+    ]
     T=1000
     T_eval=250
+    n_runs = 5
+    
     assert T + T_eval < len(data), "Not enough data for training and evaluation"
+    assert all([fn in all_features for fn in feature_names]), "Some of your features are not found in the DataFrame"
+    data = data[["AAPL Close"] + feature_names]
     
     # Split the data into training and evaluation sets
     eval_data = data.iloc[T:T + T_eval]
@@ -176,11 +455,11 @@ if __name__ == "__main__":
         "transaction_fee_rate": 0.001,
         "initial_cash": 100.0,
         "overspending_penalty_coeff": 0.001,
-        "feature_names": []
+        "feature_names": feature_names
     }
     
     td3_params = {
-        "state_dim": 3,
+        "state_dim": 3 + len(feature_names),
         "action_dim": 1,
         "polyak": 0.995
     }
@@ -196,49 +475,8 @@ if __name__ == "__main__":
         "random_steps": 1000,
         "memory_size": 100_000,
         "patience":20,
-        "eval_freq":5
+        "eval_freq":10
     }
     
-    run_experiment(1, data, eval_data, td3_params, env_params, training_params, n_runs=3, T=T, T_eval=T_eval)
+    run_experiment(EXPERIMENT_ID, data, eval_data, td3_params, env_params, training_params, n_runs=n_runs, T=T, T_eval=T_eval)
     
-    """env = TradingEnv(data, N=20, K_max=100.0, 
-                     transaction_fee_rate=0 * 0.001,
-                     initial_cash=100.0,
-                     overspending_penalty_coeff=0 * 0.001,
-                     feature_names=["feature1", "feature2"],)
-    
-    # action_noise = NormalActionNoise(mean=np.zeros(env.n_stocks), sigma=0.1 * np.ones(env.n_stocks))
-    # model = TD3(
-    #     "MlpPolicy",
-    #     env,
-    #     action_noise=action_noise,
-    #     verbose=1,
-    #     learning_rate=1e-3,
-    #     buffer_size=100_000,
-    #     learning_starts=1000,
-    #     batch_size=128,
-    #     tau=0.005,
-    #     gamma=0.99,
-    #     train_freq=(1, "episode"),
-    #     gradient_steps=-1,
-    #     policy_kwargs=dict(net_arch=[256, 256])
-    # )
-    # model.learn(total_timesteps=10000)
-    DO_TRAIN = False
-    if DO_TRAIN:
-        model = TD3Agent(state_dim=env.observation_space.shape[0], 
-                    action_dim=env.action_space.shape[0],
-                    min_action=env.action_space.low,
-                    max_action=env.action_space.high,
-                    optim_constructor=lambda params: torch.optim.Adam(params, lr=0.001),
-                    polyak=0.995
-                    )
-        model.train(env, steps=3000, batch_size=128, gamma=0.99, expl_noise_std=0.1,
-                    policy_noise_std=0.2, policy_noise_clip=0.5, policy_delay=2,
-                    random_steps=1000, memory_size=100_000, log_fn=create_live_plot_logger())
-        model.save("models/toy")
-    else:
-        model = TD3Agent.load("models/toy", lambda params: torch.optim.Adam(params, lr=0.001))
-    evaluate_agent(env, model, 50)
-    evaluate_random_agent(env, 50)
-    evaluate_buy_and_hold_agent(env, 50)"""
