@@ -63,7 +63,7 @@ Last but not least, this file contains everything related to the data. For now, 
 ### Extras: `useful_scripts` directory
 
 * `useful_scripts/features.ipynb` is the notebook where I explored the DataFrame containing data + features, in particular to figure out by how much to scale each column in order to have roughly normalized features and data. Since I do not want to introduce look-ahead bias, normalizations are simply done by hand and sort of arbitrarily.
-* `useful_scripts/visualize_results.ipynb` is a notebook to print out the results of each experient, to quickly see which experiments worked better or not.
+* `useful_scripts/visualize_results.ipynb` is a notebook to print out the results of each experiment, to quickly see which experiments worked better or not.
 
 ### `tests`: Unit testing
 `tests` is a directory with (lacking) unit tests. For now, there is only one file to test the environment and make sure that it works as expected.
