@@ -1,4 +1,9 @@
 data/
+!data/HistoricalQuotes.csv
+!data/results/
+!data/results/**
+!data/params/
+!data/params/**
 models/
 temp_tests/
 journal
