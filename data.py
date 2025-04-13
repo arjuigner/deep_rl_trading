@@ -1,5 +1,5 @@
 import pandas as pd
-import numpy as np
+import yfinance as yf
 from typing import Tuple, List
 
 def make_features(data: pd.DataFrame) -> Tuple[pd.DataFrame, List[str]]:
@@ -92,7 +92,7 @@ def make_features(data: pd.DataFrame) -> Tuple[pd.DataFrame, List[str]]:
     
     return df, new_cols
 
-def load_and_clean_stock_data(filepath: str) -> pd.DataFrame:
+def load_and_clean_aapl_stock_data(filepath: str) -> pd.DataFrame:
     df = pd.read_csv(filepath)
     print(f"Data size: {df.shape}; #NaNs = {df.isna().sum().sum()}")
     
@@ -122,8 +122,8 @@ def load_and_clean_stock_data(filepath: str) -> pd.DataFrame:
 
     return df[["Close",]]
 
-def get_data_with_features(filepath: str) -> pd.DataFrame:
-    data = load_and_clean_stock_data(filepath)
+def get_aapl_data_with_features(filepath: str) -> Tuple[pd.DataFrame, List[str]]:
+    data = load_and_clean_aapl_stock_data(filepath)
     data.rename({"Close": "AAPL Close"}, axis="columns", inplace=True)
     print("Columns of data after selecting Close and renaming it:", data.columns)
     
@@ -133,6 +133,56 @@ def get_data_with_features(filepath: str) -> pd.DataFrame:
     
     return data, feature_names
 
+def download_ford_stock_data():
+    """
+    Downloads Ford daily stock data for the last 6 years from Yahoo Finance,
+    processes the data to keep only the 'Close' column, handles missing values,
+    orders the rows by date, and resets the index to be a simple integer index.
+    
+    Returns:
+        df (pd.DataFrame): Processed DataFrame with a single 'Close' column.
+    """
+    # Calculate dates for a 6-year period ending today
+    end_date = "2024-01-01"
+    start_date = "2018-01-01"
+    
+    # Download Ford stock data using its ticker symbol "F"
+    # progress=False suppresses the progress bar output from yfinance
+    df = yf.download("F", start=start_date, 
+                     end=end_date, progress=False)
+    
+    if df.empty:
+        raise ValueError("No data was downloaded. Check your network connection or query parameters.")
+    
+    if isinstance(df.columns, pd.MultiIndex):
+        df.columns = df.columns.get_level_values(0)
+        
+    # Retain only the 'Close' column from the full DataFrame
+    df = df[['Close',]]
+    
+    # Ensure the data is ordered chronologically by date
+    df = df.sort_index()
+
+    # Check and handle missing values (NaNs):
+    # A forward fill is applied to propagate the last valid value.
+    # A backward fill is also applied in case the first values are NaN.
+    if df['Close'].isna().sum() > 0:
+        df['Close'].fillna(method='ffill', inplace=True)
+        df['Close'].fillna(method='bfill', inplace=True)
+    
+    # Reset the index: remove the date index and replace it with an integer index
+    df.reset_index(drop=True, inplace=True)
+    return df
+
+def get_ford_data_with_features(*args) -> Tuple[pd.DataFrame, List[str]]:
+    data = download_ford_stock_data()
+    data.rename({"Close": "F Close"}, axis="columns", inplace=True)
+    print("Columns of data after selecting Close and renaming it:", data.columns)
+    data, feature_names = make_features(data)
+    print("Columns of data after make_features:", data.columns)
+    print("feature_names =", feature_names)
+    return data, feature_names
+    
 def remove_nans(data: pd.DataFrame) -> pd.DataFrame:
     print("Number of NaNs in each column:\n", data.isna().sum(axis=0))
     max_nans_per_col = data.isna().sum(axis=0).max()
@@ -146,7 +196,7 @@ def remove_nans(data: pd.DataFrame) -> pd.DataFrame:
     print(f"Shape: {data.shape}")
     return data
 
-def normalize(data: pd.DataFrame) -> pd.DataFrame:
+def aapl_normalize(data: pd.DataFrame) -> pd.DataFrame:
     # Returns
     ret_cols = [col for col in data.columns if "ret_t" in col]
     print("Normalize returns:", ret_cols)
@@ -161,7 +211,7 @@ def normalize(data: pd.DataFrame) -> pd.DataFrame:
         data.loc[:,col] *= 10
         
     # MACD
-    macd_cols = [col for col in data.columns if "macd_" in col]
+    macd_cols = [col for col in data.columns if "macd" in col]
     print("Normalize macd:", macd_cols)
     for col in macd_cols:
         data.loc[:,col] *= 20
@@ -177,5 +227,39 @@ def normalize(data: pd.DataFrame) -> pd.DataFrame:
     print("Normalize close:", close_cols)
     for col in close_cols:
         data.loc[:,col] /= data.loc[0, col] 
+    
+    return data
+
+def ford_normalize(data):
+    # Returns
+    ret_cols = [col for col in data.columns if "ret_t" in col]
+    print("Normalize returns:", ret_cols)
+    for col in ret_cols:
+        data.loc[:,col] *= 20
+    
         
+    # SMAs
+    sma_cols = [col for col in data.columns if "sma_" in col]
+    print("Normalize sma:", sma_cols)
+    for col in sma_cols:
+        data.loc[:,col] *= 10
+        
+    # MACD
+    macd_cols = [col for col in data.columns if "macd" in col]
+    print("Normalize macd:", macd_cols)
+    for col in macd_cols:
+        data.loc[:,col] *= 20
+    
+    # VOL
+    vol_cols = [col for col in data.columns if "vol_" in col]
+    print("Normalize vol:", vol_cols)
+    for col in vol_cols:
+        data.loc[:,col] *= 40
+        
+    # Close
+    close_cols = [col for col in data.columns if "Close" in col]
+    print("Normalize close:", close_cols)
+    for col in close_cols:
+        data.loc[:,col] /= data.loc[0, col] 
+    
     return data

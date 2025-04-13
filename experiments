@@ -1,8 +1,6 @@
-1: [deleted by mistake, worked decently well] 
-Local AAPL data, Close only, no features, T=100=T_eval for now
-Agent seems to be able to learn something at least, even on test dataset.
+Ford (F)
 
-1: [worked meh, but better than nothing it seems]
+1:
 now patience=20 (because increasing patience doesnt hurt perf, only "wastes" more time once the eval score decreases
 T=1000, T_eval=250
 
@@ -21,6 +19,8 @@ T=1000, T_eval=250
        'AAPL rsi_14', 'AAPL macd', 'AAPL macd_signal', 'AAPL macd_hist',
        'AAPL vol_10')
 
-6: TODO same as 4 but with eval_freq bigger (so give it more time to learn)
+6: same as 4 but with eval_freq bigger (5-->10) (so give it more time to learn)
 
-7: TODO  same as 5 but eval_freq bigger
+7 to 12: same as 1 to 6 but with steps 10k -> 30k and random_steps 1k -> 2k
+
+
